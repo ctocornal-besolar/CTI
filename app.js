@@ -1,0 +1,22 @@
+const menu=document.querySelector('.menu');const nav=document.querySelector('nav');
+menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open)});
+nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.setAttribute('aria-expanded','false');nav.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&nav.classList.contains('open')){nav.classList.remove('open');menu.setAttribute('aria-expanded','false');menu.focus()}});
+const form=document.querySelector('#quote-form'),status=document.querySelector('#form-status');
+const email=window.CTI_CONFIG.email;document.querySelector('.email').textContent=email;document.querySelector('.email').href='mailto:'+email;
+document.querySelectorAll('[data-sector]').forEach(a=>a.addEventListener('click',()=>{form.elements.sector.value=a.dataset.sector}));
+function requestText(){const data=new FormData(form);return 'SOLICITUD DE COTIZACIÓN · CTI\n\n'+[['Nombre','nombre'],['Empresa','empresa'],['Correo','correo'],['Teléfono','telefono'],['Sector','sector'],['Ubicación','ubicacion'],['Requerimiento','detalle']].map(([label,key])=>label+': '+(data.get(key).trim()||'No indicado')).join('\n')+'\n\nAdjuntar planos o especificaciones disponibles al enviar el correo.'}
+form.addEventListener('submit',e=>{e.preventDefault();if(!form.reportValidity())return;const subject='Cotización CTI · '+form.elements.sector.value;const url='mailto:'+email+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(requestText());window.location.href=url;status.textContent='Se solicitó abrir tu aplicación de correo. Revisa el mensaje y envíalo desde allí. Si no se abre, descarga la solicitud y envíala a '+email+'. La solicitud aún no ha sido enviada.'});
+document.querySelector('#download').addEventListener('click',()=>{if(!form.reportValidity())return;const url=URL.createObjectURL(new Blob([requestText()],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='solicitud-cotizacion-cti.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='Solicitud descargada. Envíala a '+email+' para solicitar tu cotización.'});
+
+// Sector exploration: keyboard-friendly tabs, with full content when JS is off.
+const tabs=[...document.querySelectorAll('.sector-tabs [role="tab"]')];
+const panels=tabs.map(tab=>document.getElementById(tab.getAttribute('aria-controls')));
+function activateSector(index,focus=false){tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;panels[i].hidden=i!==index});if(focus)tabs[index].focus()}
+tabs.forEach((tab,index)=>{panels[index].setAttribute('role','tabpanel');panels[index].tabIndex=0;tab.addEventListener('click',()=>activateSector(index));tab.addEventListener('keydown',event=>{let next=index;if(event.key==='ArrowRight')next=(index+1)%tabs.length;else if(event.key==='ArrowLeft')next=(index-1+tabs.length)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();activateSector(next,true)})});
+document.querySelector('.sector-tabs').hidden=false;document.querySelector('.sector-list').classList.add('enhanced');activateSector(0);
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+if('IntersectionObserver' in window&&!reducedMotion.matches){const targets=document.querySelectorAll('.section-heading,.services article,.history>div,.process li,.quote>div,.quote form');const observer=new IntersectionObserver(entries=>{entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target)}})},{threshold:.06});targets.forEach(el=>{el.classList.add('reveal');observer.observe(el)});document.body.classList.add('motion-ready');document.addEventListener('focusin',event=>{event.target.closest('.reveal')?.classList.add('visible')});}
+const header=document.querySelector('header'),progress=document.querySelector('.reading-progress');let ticking=false;
+function updateScroll(){const range=document.documentElement.scrollHeight-innerHeight;progress.style.transform='scaleX('+(range>0?Math.min(1,scrollY/range):0)+')';header.classList.toggle('scrolled',scrollY>20);ticking=false}
+window.addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(updateScroll);ticking=true}},{passive:true});window.addEventListener('resize',updateScroll);updateScroll();
